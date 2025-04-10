@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced TTS & STT Web App</title>
+  <style>
+    /* Enhanced CSS */
+    :root {
+      --primary-color: #6a1b9a;
+      --dark-primary: #4a148c;
+      --background: #f4f4f9;
+      --text: #333;
+      --transition: all 0.3s ease;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: var(--background);
+      color: var(--text);
+      transition: var(--transition);
+    }
+
+    header {
+      background: var(--primary-color);
+      color: white;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: var(--transition);
+    }
+
+    main {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    section {
+      background: white;
+      padding: 2rem;
+      border-radius: 10px;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .dark-mode section {
+      background: #444;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      resize: vertical;
+    }
+
+    button {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    button:hover {
+      background: var(--dark-primary);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+
+    .recording-indicator {
+      width: 12px;
+      height: 12px;
+      background: #ff4444;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    .dark-mode {
+      --background: #333;
+      --text: #f4f4f9;
+      --primary-color: #4a148c;
+    }
+
+    #tts-status {
+      margin: 1rem 0;
+      font-style: italic;
+      color: #666;
+    }
+
+    .dark-mode #tts-status {
+      color: #aaa;
+    }
+
+    #transcribed-text {
+      min-height: 100px;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin: 1rem 0;
+    }
+
+    .interim {
+      opacity: 0.7;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Enhanced Speech Tools</h1>
+    <div>
+      <button id="dark-mode-toggle" aria-label="Toggle dark mode">
+        🌓 Dark Mode
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- TTS Section -->
+    <section id="tts-section">
+      <h2>🎤 Text-to-Speech</h2>
+      <textarea id="tts-input" placeholder="Enter text here..."></textarea>
+      
+      <div class="controls">
+        <div class="control-group">
+          <label for="language">Language</label>
+          <select id="language"></select>
+        </div>
+        <div class="control-group">
+          <label for="voice">Voice</label>
+          <select id="voice"></select>
+        </div>
+        <div class="control-group">
+          <label for="rate">Speed: <span id="rate-value">1</span></label>
+          <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        <div class="control-group">
+          <label for="pitch">Pitch: <span id="pitch-value">1</span></label>
+          <input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="preview-voice">🎧 Preview</button>
+        <button id="play-tts">▶ Play</button>
+        <button id="pause-resume-tts">⏸ Pause</button>
+        <button id="stop-tts">⏹ Stop</button>
+        <button id="download-tts">📥 Download</button>
+        <button id="refresh-voices">🔄 Refresh Voices</button>
+      </div>
+      <div id="tts-status"></div>
+    </section>
+
+    <!-- STT Section -->
+    <section id="stt-section">
+      <h2>🎙 Speech-to-Text</h2>
+      <div class="controls">
+        <div class="control-group">
+          <label for="stt-language">Language</label>
+          <select id="stt-language">
+            <option value="en-US">English (US)</option>
+            <option value="es-ES">Spanish (ES)</option>
+            <option value="fr-FR">French (FR)</option>
+            <option value="de-DE">German (DE)</option>
+            <option value="it-IT">Italian (IT)</option>
+            <option value="ja-JP">Japanese (JP)</option>
+            <option value="ko-KR">Korean (KR)</option>
+            <option value="zh-CN">Chinese (CN)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>
+            <input type="checkbox" id="continuous-mode" checked>
+            Continuous Mode
+          </label>
+          <label>
+            <input type="checkbox" id="interim-results" checked>
+            Show Partial Results
+          </label>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="start-record">● Start Recording</button>
+        <button id="stop-record" disabled>◼ Stop</button>
+        <div class="recording-indicator"></div>
+      </div>
+      
+      <div id="transcribed-text"></div>
+      <button id="copy-text">📋 Copy Text</button>
+    </section>
+
+    <!-- User Guide -->
+    <section id="user-guide">
+      <h2>📖 User Guide</h2>
+      <div class="controls">
+        <div>
+          <h3>🗣 TTS Features</h3>
+          <ul>
+            <li>50+ languages supported (browser dependent)</li>
+            <li>Adjustable speech parameters</li>
+            <li>Audio download capability</li>
+            <li>Voice preview function</li>
+          </ul>
+        </div>
+        <div>
+          <h3>🎙 STT Features</h3>
+          <ul>
+            <li>Real-time transcription</li>
+            <li>Multiple language support</li>
+            <li>Continuous listening mode</li>
+            <li>Partial results display</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2023 Enhanced Speech Tools | Supports Chrome & Edge</p>
+  </footer>
+
+  <script>
+    // TTS Configuration
+    const ttsInput = document.getElementById('tts-input');
+    const languageSelect = document.getElementById('language');
+    const voiceSelect = document.getElementById('voice');
+    const rateInput = document.getElementById('rate');
+    const pitchInput = document.getElementById('pitch');
+    const playButton = document.getElementById('play-tts');
+    const pauseResumeButton = document.getElementById('pause-resume-tts');
+    const stopButton = document.getElementById('stop-tts');
+    const previewButton = document.getElementById('preview-voice');
+    const downloadButton = document.getElementById('download-tts');
+    const refreshButton = document.getElementById('refresh-voices');
+    const ttsStatus = document.getElementById('tts-status');
+
+    // STT Configuration
+    const sttLanguageSelect = document.getElementById('stt-language');
+    const startRecordButton = document.getElementById('start-record');
+    const stopRecordButton = document.getElementById('stop-record');
+    const transcribedText = document.getElementById('transcribed-text');
+    const copyButton = document.getElementById('copy-text');
+    const continuousCheckbox = document.getElementById('continuous-mode');
+    const interimCheckbox = document.getElementById('interim-results');
+
+    // Dark Mode
+    document.getElementById('dark-mode-toggle').addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+    });
+
+    // TTS Functionality
+    let synth = window.speechSynthesis;
+    let utterance = new SpeechSynthesisUtterance();
+    let voices = [];
+
+    function populateLanguages() {
+      voices = synth.getVoices();
+      const languages = [...new Set(voices.map(v => v.lang))];
+      languageSelect.innerHTML = languages.map(lang => 
+        `<option value="${lang}">${lang}</option>`
+      ).join('');
+      populateVoices();
+    }
+
+    function populateVoices() {
+      const selectedLang = languageSelect.value;
+      voiceSelect.innerHTML = voices
+        .filter(v => v.lang === selectedLang)
+        .map(v => `<option value="${v.name}">${v.name}</option>`)
+        .join('');
+    }
+
+    languageSelect.addEventListener('change', populateVoices);
+    refreshButton.addEventListener('click', () => {
+      voices = synth.getVoices();
+      populateLanguages();
+      ttsStatus.textContent = 'Voices refreshed!';
+      setTimeout(() => ttsStatus.textContent = '', 2000);
+    });
+
+    // Speech Controls
+    playButton.addEventListener('click', () => {
+      utterance.text = ttsInput.value;
+      utterance.voice = voices.find(v => v.name === voiceSelect.value);
+      utterance.rate = rateInput.value;
+      utterance.pitch = pitchInput.value;
+      synth.speak(utterance);
+      ttsStatus.textContent = 'Playing...';
+    });
+
+    pauseResumeButton.addEventListener('click', () => {
+      if (synth.paused) {
+        synth.resume();
+        pauseResumeButton.textContent = '⏸ Pause';
+        ttsStatus.textContent = 'Playing...';
+      } else {
+        synth.pause();
+        pauseResumeButton.textContent = '▶ Resume';
+        ttsStatus.textContent = 'Paused';
+      }
+    });
+
+    stopButton.addEventListener('click', () => {
+      synth.cancel();
+      ttsStatus.textContent = 'Stopped';
+      setTimeout(() => ttsStatus.textContent = '', 2000);
+    });
+
+    previewButton.addEventListener('click', () => {
+      utterance.text = "This is a voice preview of the current settings.";
+      synth.speak(utterance);
+    });
+
+    // Download Handler
+    downloadButton.addEventListener('click', async () => {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const destination = audioContext.createMediaStreamDestination();
+      const mediaRecorder = new MediaRecorder(destination.stream);
+      const chunks = [];
+      
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tts-${Date.now()}.wav`;
+        a.click();
+      };
+
+      const source = audioContext.createMediaStreamSource(destination.stream);
+      mediaRecorder.start();
+      synth.speak(utterance);
+      utterance.onend = () => mediaRecorder.stop();
+    });
+
+    // STT Functionality
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = continuousCheckbox.checked;
+    recognition.interimResults = interimCheckbox.checked;
+    recognition.lang = sttLanguageSelect.value;
+
+    recognition.onresult = e => {
+      let transcript = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const result = e.results[i];
+        const text = result[0].transcript;
+        transcript += result.isFinal ? text : `<span class="interim">${text}</span> `;
+      }
+      transcribedText.innerHTML = transcript;
+    };
+
+    recognition.onerror = e => {
+      console.error('Recognition error:', e.error);
+      alert(`Error: ${e.error}`);
+    };
+
+    sttLanguageSelect.addEventListener('change', () => recognition.lang = sttLanguageSelect.value);
+    continuousCheckbox.addEventListener('change', () => recognition.continuous = continuousCheckbox.checked);
+    interimCheckbox.addEventListener('change', () => recognition.interimResults = interimCheckbox.checked);
+
+    startRecordButton.addEventListener('click', () => {
+      recognition.start();
+      startRecordButton.disabled = true;
+      stopRecordButton.disabled = false;
+    });
+
+    stopRecordButton.addEventListener('click', () => {
+      recognition.stop();
+      startRecordButton.disabled = false;
+      stopRecordButton.disabled = true;
+    });
+
+    copyButton.addEventListener('click', () => {
+      navigator.clipboard.writeText(transcribedText.textContent);
+      transcribedText.innerHTML += '<div class="copied-notice">Copied!</div>';
+      setTimeout(() => document.querySelector('.copied-notice').remove(), 2000);
+    });
+
+    // Initial Setup
+    populateLanguages();
+    rateInput.addEventListener('input', e => document.getElementById('rate-value').textContent = e.target.value);
+    pitchInput.addEventListener('input', e => document.getElementById('pitch-value').textContent = e.target.value);
+  </script>
+</body>
+</html>
